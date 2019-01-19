@@ -173,12 +173,9 @@ def minimizing_direction(w,x,t, i, e):
 
 def gradient_descent(w, training_data_input, training_data_output):
 
-
-
     for e in range(epoch):
         
         i = 0
-
         i_last_update = 0
         update_error_vectors(w)
 
@@ -188,18 +185,15 @@ def gradient_descent(w, training_data_input, training_data_output):
             w = w - min_dir
 
             #Updating error vectors
-            if (i - i_last_update > training_data_size/4):
+            if (i - i_last_update >= training_data_size/4):
                 update_error_vectors(w)
                 i_last_update = i
             
-
-
-
         print("Epoch: ", e+1)
         
     update_error_vectors(w)
 
-    return (w, error_vector_training, error_vector_validation, error_vector_test, percent_correct_training_vector, percent_correct_validation_vector, percent_correct_testing_vector)
+    return w
     
 
 
@@ -214,5 +208,5 @@ plt.plot(percent_correct_validation_vector, label = 'percentage correct validati
 plt.plot(percent_correct_testing_vector, label = 'percentage correct testing data')
 plt.plot()
 plt.legend()
-plt.grid(linestyle='-', linewidth=2)
+plt.grid(linestyle='-', linewidth=1)
 plt.show()
