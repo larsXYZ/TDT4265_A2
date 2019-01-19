@@ -4,7 +4,7 @@ import one_hot_encoding as ohe
 import matplotlib.pyplot as plt
 
 #Data settings
-training_data_size = 10000
+training_data_size = 11000
 validation_data_size = 500
 testing_data_size = 1000
 
@@ -82,7 +82,7 @@ def test(w,testing_data_input,testing_data_output):
         
 
 
-def validation_test(w, x_val, t_val):
+def validation_test(w, x_val, t_val): #Returns total error from validation data
     
     error_validation = 0
     for i in range(validation_data_size):
@@ -91,7 +91,6 @@ def validation_test(w, x_val, t_val):
         y_val_n = feed_forward(w,x_val_n)
 
         error_validation += error_function(y_val_n,t_val_n)
-    error_validation /= validation_data_size
     return error_validation
 
 def error_function(y_n,t_n):
@@ -104,11 +103,10 @@ def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
     
     return np.outer((t_n-y_n), x_n)
 
-def minimizing_direction(w,x,t, x_val, t_val, i, e):
+def minimizing_direction(w,x,t, i, e):
 
     gradient = np.zeros([1,785])
     error_training = 0
-    error_validation = 0
 
     number_of_training_sets = min(batch_size,training_data_size-i)
     if number_of_training_sets <= 0: return 0
@@ -126,15 +124,11 @@ def minimizing_direction(w,x,t, x_val, t_val, i, e):
         gradient += gradient_function(x_n,y_n,t_n)
 
         i += 1
-
-
-    #Checking validation data
-    error_validation = validation_test(w,x_val,t_val)
     
     gradient = gradient/number_of_training_sets
-    error_training = error_training/number_of_training_sets
+    error_training
 
-    return (-learning_rate(i, e)*gradient,error_training,error_validation, i)
+    return (-learning_rate(i, e)*gradient,error_training, i)
 
 def gradient_descent(training_data_input, training_data_output):
     
@@ -145,22 +139,22 @@ def gradient_descent(training_data_input, training_data_output):
     for e in range(epoch):
         i = 0
 
-        et = 0
-        ev = 0
+        error_training_sum = 0
 
         while i < training_data_size:
 
-            min_dir, error_training, error_validation, i = minimizing_direction(w,training_data_input,training_data_output, validation_data_input, validation_data_output, i, e)
+            min_dir, error_training, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
             w = w - min_dir
+            error_training_sum += error_training
 
-            et += error_training
-            ev += error_validation
+        #Checking validation data
+        error_validation = validation_test(w,validation_data_input,validation_data_output)
 
-        error_vector_training.append(et/training_data_size)
-        error_vector_validation.append(ev/training_data_size)
+        error_vector_training.append(error_training_sum/training_data_size)
+        error_vector_validation.append(error_validation/validation_data_size)
 
 
-        print("Epoch:", e+1, " | Current training-error: ", et/training_data_size, " | Current validation-error: ", ev/training_data_size, " | Current learning rate: ", learning_rate(i, e))
+        print("Epoch:", e+1, " | Current training-error: ", error_training_sum/training_data_size, " | Current validation-error: ", error_validation/validation_data_size, " | Current learning rate: ", learning_rate(i, e))
         
     
     return (w, error_vector_training, error_vector_validation)
