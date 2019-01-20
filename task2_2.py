@@ -42,9 +42,10 @@ input()
 
 #Hypervariables
 epoch = 10
-batch_size = 100
-initial_learning_rate = 0.01 #Annealing learning rate
-T = 300000
+batch_size = 10
+initial_learning_rate = 0.01 #Initial annealing learning rate
+L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
+T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
 
 #Error storage
 error_vector_training = []
@@ -133,12 +134,15 @@ def data_set_test(w, input_data, output_data): #Returns total error from data se
         t_val_n = output_data[i]
         y_val_n = feed_forward(w,x_val_n)
 
-        error_sum += error_function(y_val_n,t_val_n)
+        error_sum += error_function_L2(w,y_val_n,t_val_n)
 
     return error_sum
 
 def error_function(y_n,t_n):
     return -(t_n*np.log(y_n) + (1.0001-t_n)*np.log(1.0001-y_n))
+
+def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
+    return error_function(y_n, t_n) + L2_coeffisient*np.sum(np.square(w))
 
 def feed_forward(w,x_n):
     return g(np.dot(w,x_n))
@@ -146,6 +150,9 @@ def feed_forward(w,x_n):
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
     
     return np.outer((t_n-y_n), x_n)
+
+def gradient_function_L2(w,x_n,y_n,t_n):
+    return gradient_function(x_n,y_n,t_n) + 2 * L2_coeffisient * w
 
 def minimizing_direction(w,x,t, i, e):
 
@@ -162,7 +169,7 @@ def minimizing_direction(w,x,t, i, e):
         t_n = t[i]
 
         #Performing gradient descent
-        gradient += gradient_function(x_n,y_n,t_n)
+        gradient += gradient_function_L2(w,x_n,y_n,t_n)
 
 
         i += 1
@@ -178,7 +185,6 @@ def gradient_descent(w, training_data_input, training_data_output):
         i = 0
         i_last_update = 0
         update_error_vectors(w)
-        
 
         #Running training data
         while i < training_data_size:
