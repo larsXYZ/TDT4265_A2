@@ -4,8 +4,8 @@ import one_hot_encoding as ohe
 import matplotlib.pyplot as plt
 
 #Data settings
-training_data_size = 50000
-validation_data_size = 5000
+training_data_size = 55000
+validation_data_size = 4000
 testing_data_size = 1000
 
 #Loading data from MNIST dataset
@@ -137,7 +137,7 @@ def data_set_test(w, input_data, output_data): #Returns total error from data se
     return error_sum
 
 def error_function(y_n,t_n):
-    return -(t_n*np.log(y_n) + (1.0001-t_n)*np.log(1.0001-y_n))
+    return np.sum(np.dot(t_n,np.log(y_n+0.0001)))
 
 def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
     return error_function(y_n, t_n) + np.sum(np.square(w))
