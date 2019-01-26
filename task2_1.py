@@ -36,17 +36,22 @@ validation_data_output = Y_train[training_data_size:training_data_size+validatio
 testing_data_input = X_test[-testing_data_size:].copy()
 testing_data_output = Y_test[-testing_data_size:].copy()
 
-print(np.shape(X_train), np.shape(Y_train))
-print(np.shape(X_test), np.shape(Y_test))
+print("Training and testing samples: ", np.shape(Y_train)[0], ", ", np.shape(Y_test)[0] )
+print("Training data shape:",np.shape(training_data_input), np.shape(training_data_output))
+print("Validation data shape:",np.shape(validation_data_input), np.shape(validation_data_output))
+print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_output))
 input()
 
 #Hypervariables
-epoch = 10
-batch_size = 100
-initial_learning_rate = 0.01 #Annealing learning rate
-T = 300000
+epoch = 100
+batch_size = 50
+initial_learning_rate = 0.1 #Annealing learning rate
+T = 30000
+early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
 
 #Error storage
+number_of_error_check_per_epoch = 1
+error_check_interval = training_data_size / number_of_error_check_per_epoch
 error_vector_training = []
 error_vector_validation = []
 error_vector_test = []
@@ -173,6 +178,10 @@ def minimizing_direction(w,x,t, i, e):
 
 def gradient_descent(w, training_data_input, training_data_output):
 
+    #Storing previous weights for early stopping
+    weight_storage = []
+    weight_storage.append(w)
+
     for e in range(epoch):
         
         i = 0
@@ -186,27 +195,44 @@ def gradient_descent(w, training_data_input, training_data_output):
             w = w - min_dir
 
             #Updating error vectors
-            if (i - i_last_update >= training_data_size/4):
+            if (i - i_last_update >= error_check_interval):
                 update_error_vectors(w)
                 i_last_update = i
             
-        print("Epoch: ", e+1)
+        print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", error_vector_validation[-1])
+
+        weight_storage.append(w)
         
+        #Early stopping test
+        validation_only_increasing = True
+        for i in range(early_stopping_threshold):
+            if error_vector_validation[-i-1] < error_vector_validation[-i-2]:
+                validation_only_increasing = False
+                break
+        if validation_only_increasing:
+            print("EARLY STOPPING: Validation error function increased ", early_stopping_threshold, " times in a row. Stopping training")
+            return weight_storage[-1-i]
+
     update_error_vectors(w)
 
     return w
-    
-
 
 #Training a network
 weights = gradient_descent(weights, training_data_input,training_data_output)
 
-plt.plot(error_vector_training, label = 'training error')
-plt.plot(error_vector_validation, label = 'validation error')
-plt.plot(error_vector_test, label = 'testing error')
-plt.plot(percent_correct_training_vector, label = 'percentage correct training data')
-plt.plot(percent_correct_validation_vector, label = 'percentage correct validation data')
-plt.plot(percent_correct_testing_vector, label = 'percentage correct testing data')
+#Prepare the x axis values
+x = np.linspace(0,epoch,len(error_vector_training))
+
+#Plotting
+plt.plot(x,error_vector_training, label = 'training error')
+plt.plot(x,error_vector_validation, label = 'validation error')
+plt.plot(x,error_vector_test, label = 'testing error')
+plt.plot(x,percent_correct_training_vector, label = 'percentage correct training data')
+plt.plot(x,percent_correct_validation_vector, label = 'percentage correct validation data')
+plt.plot(x,percent_correct_testing_vector, label = 'percentage correct testing data')
+plt.xlabel("Epoch")
+plt.ylabel("Error function value and percentage correct")
+
 plt.plot()
 plt.legend()
 plt.grid(linestyle='-', linewidth=1)

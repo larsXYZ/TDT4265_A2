@@ -1,0 +1,10 @@
+fig1 settings:
+
+training_data_size = 11000
+validation_data_size = 500
+testing_data_size = 1000
+epoch = 3
+batch_size = 50
+initial_learning_rate = 0.1
+T = 30000
+error_check_interval = training_data_size / 20
