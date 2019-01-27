@@ -9,9 +9,11 @@ with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_training_vector', 'rb') as fp: percent_correct_training_vector = pickle.load(fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_validation_vector', 'rb') as fp: percent_correct_validation_vector = pickle.load(fp)
 
-plt.plot(error_vector_validation)
-plt.plot(error_vector_test)
-plt.plot(error_vector_training)
+plt.plot(error_vector_test, label='Testing')
+plt.plot(error_vector_training, label='Training')
+plt.plot(error_vector_validation, label = 'Validation')
+plt.ylabel('Loss function value')
+plt.legend()
 plt.show()
 
 for i in range(len(percent_correct_testing_vector)):
