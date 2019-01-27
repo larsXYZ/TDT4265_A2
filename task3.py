@@ -2,6 +2,7 @@ import mnist
 import numpy as np
 import one_hot_encoding as ohe
 import matplotlib.pyplot as plt
+import pickle
 
 #Data settings
 training_data_size = 55000
@@ -53,7 +54,7 @@ percent_correct_training_vector = []
 percent_correct_validation_vector = []
 percent_correct_testing_vector = []
 
-#Initializing weights 
+#Initializing weights
 weights = np.random.rand(10,785)
 
 
@@ -80,7 +81,7 @@ def g(y_n):
     return 1/(1+np.exp(-y_n))
 
 def percent_correct_test(w,input_data,output_data):
-    
+
     #Input check
     data_length = np.shape(input_data)[0]
     if np.shape(output_data)[0] != data_length:
@@ -101,22 +102,22 @@ def percent_correct_test(w,input_data,output_data):
         x_n = input_data[i]
         y_n = feed_forward(w,x_n)
         t_n = output_data[i]
-        
+
         c = (1-y_n[ohe.one_hot_encoding_inverse(t_n)])**2
 
         if c < correct_threshold**2:
             correct += 1
         else:
             false += 1
-        
+
         confidence += np.sqrt(c)
-    
+
     confidence = 1 - confidence/testing_data_size
-    
+
     return correct/(correct+false)
 
 def data_set_test(w, input_data, output_data): #Returns total error from data set
-    
+
     #Input check
     data_length = np.shape(input_data)[0]
     if np.shape(output_data)[0] != data_length:
@@ -146,7 +147,7 @@ def feed_forward(w,x_n):
     return g(np.dot(w,x_n))
 
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
-    
+
     return np.outer((t_n-y_n), x_n)
 
 def gradient_function_L2(w,x_n,y_n,t_n):
@@ -171,7 +172,7 @@ def minimizing_direction(w,x,t, i, e):
 
 
         i += 1
-    
+
     gradient = gradient/number_of_training_sets
 
     return (-learning_rate(i, e)*gradient, i)
@@ -179,7 +180,7 @@ def minimizing_direction(w,x,t, i, e):
 def gradient_descent(w, training_data_input, training_data_output):
 
     for e in range(epoch):
-        
+
         i = 0
         i_last_update = 0
         update_error_vectors(w)
@@ -193,25 +194,35 @@ def gradient_descent(w, training_data_input, training_data_output):
             if (i - i_last_update >= training_data_size/4):
                 update_error_vectors(w)
                 i_last_update = i
-            
+
         print("Epoch: ", e+1)
-        
+
     update_error_vectors(w)
 
     return w
-    
 
 
 #Training a network
 weights = gradient_descent(weights, training_data_input,training_data_output)
 
+#Saving data for plotting purposes
+
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_training','wb') as fp: pickle.dump(error_vector_training,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_validation','wb') as fp: pickle.dump(error_vector_validation,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_test','wb') as fp: pickle.dump(error_vector_test,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_training_vector','wb') as fp: pickle.dump(percent_correct_training_vector,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_validation_vector','wb') as fp: pickle.dump(percent_correct_validation_vector,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_testing_vector','wb') as fp: pickle.dump(percent_correct_testing_vector,fp)
+
+
+
 #plt.plot(error_vector_training, label = 'training error')
 #plt.plot(error_vector_validation, label = 'validation error')
 #plt.plot(error_vector_test, label = 'testing error')
-plt.plot(percent_correct_training_vector, label = 'percentage correct training data')
-plt.plot(percent_correct_validation_vector, label = 'percentage correct validation data')
-plt.plot(percent_correct_testing_vector, label = 'percentage correct testing data')
-plt.plot()
-plt.legend()
-plt.grid(linestyle='-', linewidth=1)
-plt.show()
+#plt.plot(percent_correct_training_vector, label = 'percentage correct training data')
+#plt.plot(percent_correct_validation_vector, label = 'percentage correct validation data')
+#plt.plot(percent_correct_testing_vector, label = 'percentage correct testing data')
+#plt.plot()
+#plt.legend()
+#plt.grid(linestyle='-', linewidth=1)
+#plt.show()
