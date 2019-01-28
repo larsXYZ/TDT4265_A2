@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #Loading stored data
-with open('/home/l/Documents/TDT4265/Assignment1/validation_data_lambda_0_01', 'rb') as fp: validation_data_lambda_0_01 = pickle.load(fp)
-#with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_01', 'rb') as fp: weight_storage_lambda_0_01 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/validation_data_lambda_0_01', 'rb') as fp: validation_data_lambda_0_01 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_01', 'rb') as fp: weight_storage_lambda_0_01 = pickle.load(fp)
 
-with open('/home/l/Documents/TDT4265/Assignment1/validation_data_lambda_0_001', 'rb') as fp: validation_data_lambda_0_001 = pickle.load(fp)
-#with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_001', 'rb') as fp: weight_storage_lambda_0_001 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/validation_data_lambda_0_001', 'rb') as fp: validation_data_lambda_0_001 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_001', 'rb') as fp: weight_storage_lambda_0_001 = pickle.load(fp)
 
-with open('/home/l/Documents/TDT4265/Assignment1/validation_data_lambda_0_0001', 'rb') as fp: validation_data_lambda_0_0001 = pickle.load(fp)
-#with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_0001', 'rb') as fp: weight_storage_lambda_0_0001 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/validation_data_lambda_0_0001', 'rb') as fp: validation_data_lambda_0_0001 = pickle.load(fp)
+with open('/home/l/Documents/TDT4265/Assignment1/task2b_data/weight_storage_lambda_0_0001', 'rb') as fp: weight_storage_lambda_0_0001 = pickle.load(fp)
 
 epoch_count = 50
 number_of_error_check_per_epoch = 10
