@@ -44,8 +44,8 @@ print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_
 input()
 
 #Hypervariables
-epoch = 10
-batch_size = 10
+epoch = 15
+batch_size = 5
 initial_learning_rate = 0.001 #Initial annealing learning rate
 L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
 T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
@@ -70,7 +70,7 @@ global last_performance_check
 training_sets_evaluated = 0
 last_performance_check = 0
 
-def update_error_vectors(w):
+def performance_test(w):
     #Checking error
     error_training = data_set_test(w,training_data_input,training_data_output)
     error_validation = data_set_test(w,validation_data_input,validation_data_output)
@@ -86,8 +86,9 @@ def update_error_vectors(w):
     error_vector_validation.append(error_validation/validation_data_size)
     error_vector_test.append(error_test/testing_data_size)
 
-def learning_rate(i, e): #Annealing learning rate
-    return initial_learning_rate/(1+(i+training_data_size*e)/T)
+def learning_rate(): #Annealing learning rate
+
+    return initial_learning_rate/(1+(training_sets_evaluated)/T)
 
 def g(y_n):
     return 1/(1+np.exp(-y_n))
@@ -125,7 +126,7 @@ def percent_correct_test(w,input_data,output_data):
         confidence += np.sqrt(c)
     
     confidence = 1 - confidence/testing_data_size
-    
+
     return correct/(correct+false)
 
 def data_set_test(w, input_data, output_data): #Returns total error from data set
@@ -189,12 +190,12 @@ def minimizing_direction(w,x,t, i, e):
         global last_performance_check
         training_sets_evaluated += 1
         if training_sets_evaluated - last_performance_check >= error_check_interval:
-            update_error_vectors(w)            
+            performance_test(w)            
             last_performance_check = training_sets_evaluated
     
     gradient = gradient/number_of_training_sets
 
-    return (-learning_rate(i, e)*gradient, i)
+    return (-learning_rate()*gradient, i)
 
 def gradient_descent(w, training_data_input, training_data_output):
 
@@ -204,7 +205,7 @@ def gradient_descent(w, training_data_input, training_data_output):
     weight_storage.append(w)
 
     #Recording network performance for plotting
-    update_error_vectors(w)
+    performance_test(w)
 
     #Recording network performance for early stopping
     validation_data_early_stopping.append(error_vector_validation[-1][0])
@@ -212,7 +213,7 @@ def gradient_descent(w, training_data_input, training_data_output):
     for e in range(epoch):
         
         i = 0
-        
+
         #Running training data
         while i < training_data_size:
             min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
@@ -222,7 +223,7 @@ def gradient_descent(w, training_data_input, training_data_output):
         weight_storage.append(w)
         validation_data_early_stopping.append(error_vector_validation[-1][0])
 
-        print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", validation_data_early_stopping[-1])
+        print("Epoch: ", e+1, " | Learning rate: ", learning_rate(), " | Validation error: ", validation_data_early_stopping[-1], " | Percentage correctly guessed (validation data set)",  percent_correct_validation_vector[-1])
 
         #Early stopping test
         validation_only_increasing = True
@@ -236,7 +237,7 @@ def gradient_descent(w, training_data_input, training_data_output):
                 return weight_storage[-1-i], weight_storage
     
     #Recording network performance
-    update_error_vectors(w)
+    performance_test(w)
 
     #Finding best weight from weight history
     best_weight = validation_data_early_stopping[-1]
