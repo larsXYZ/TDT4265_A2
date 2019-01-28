@@ -46,9 +46,7 @@ input()
 #Hypervariables
 epoch = 10
 batch_size = 10
-initial_learning_rate = 0.001 #Initial annealing learnin
-training_sets_evaluated = 0
-last_performance_check = 0g rate
+initial_learning_rate = 0.001 #Initial annealing learning rate
 L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
 T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
 early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
