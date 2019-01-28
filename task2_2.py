@@ -47,7 +47,7 @@ input()
 epoch = 5
 batch_size = 10
 initial_learning_rate = 0.1 #Initial annealing learning rate
-L2_coeffisient = 0.01 #L2 coefficient punishing model complexity, bigger -> less complex weights
+L2_coeffisient = 0.001 #L2 coefficient punishing model complexity, bigger -> less complex weights
 T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
 early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
 
@@ -145,7 +145,7 @@ def data_set_test(w, input_data, output_data): #Returns total error from data se
     return error_sum
 
 def error_function(y_n,t_n):
-    return -(t_n*np.log(y_n) + (1.0001-t_n)*np.log(1.0001-y_n))
+    return -(t_n*np.log(0.001+y_n) + (1-t_n)*np.log(1.001-y_n))
 
 def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
     return error_function(y_n, t_n) + L2_coeffisient*np.sum(np.square(w))
@@ -212,7 +212,7 @@ def gradient_descent(w, training_data_input, training_data_output):
         
         #Early stopping test
         validation_only_increasing = True
-        if (epoch > early_stopping_threshold):
+        if (e >= early_stopping_threshold-1):
             for i in range(early_stopping_threshold):
                 if error_vector_validation[-i-1] < error_vector_validation[-i-2]:
                     validation_only_increasing = False
@@ -240,18 +240,3 @@ print(len(error_vector_training))
 
 #Prepare the x axis values
 #x = np.linspace(0,epoch,len(error_vector_training))
-
-#Plotting
-#plt.plot(x,error_vector_training, label = 'training error')
-#plt.plot(x,error_vector_validation, label = 'validation error')
-#plt.plot(x,error_vector_test, label = 'testing error')
-#plt.plot(x,percent_correct_training_vector, label = 'percentage correct training data')
-#plt.plot(x,percent_correct_validation_vector, label = 'percentage correct validation data')
-#plt.plot(x,percent_correct_testing_vector, label = 'percentage correct testing data')
-#plt.xlabel("Epoch")
-#plt.ylabel("Error function value and percentage correct")
-
-#plt.plot()
-#plt.legend()
-#plt.grid(linestyle='-', linewidth=1)
-#plt.show()

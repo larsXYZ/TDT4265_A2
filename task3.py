@@ -209,7 +209,7 @@ def gradient_descent(w, training_data_input, training_data_output):
         
         #Early stopping test
         validation_only_increasing = True
-        if (epoch > early_stopping_threshold):
+        if (e >= early_stopping_threshold-1):
             for i in range(early_stopping_threshold):
                 if error_vector_validation[-i-1] < error_vector_validation[-i-2]:
                     validation_only_increasing = False
