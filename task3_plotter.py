@@ -16,10 +16,11 @@ plt.ylabel('Loss function value')
 plt.legend()
 plt.show()
 
+
 for i in range(len(percent_correct_testing_vector)):
-    percent_correct_testing_vector[i] = percent_correct_testing_vector[i]*100
     percent_correct_training_vector[i] = percent_correct_training_vector[i]*100
     percent_correct_validation_vector[i] = percent_correct_validation_vector[i]*100
+    percent_correct_testing_vector[i] = percent_correct_testing_vector[i]*100
 
 plt.plot(percent_correct_testing_vector, label='Testing')
 plt.plot(percent_correct_training_vector, label='Training')
