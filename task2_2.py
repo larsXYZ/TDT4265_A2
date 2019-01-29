@@ -62,13 +62,17 @@ percent_correct_validation_vector = []
 percent_correct_testing_vector = []
 
 #Initializing weights 
-weights = np.random.rand(1,785)
+weights = np.random.normal(size=(1,785))
 
 #Keeping track of our performance testing
 global training_sets_evaluated
 global last_performance_check
 training_sets_evaluated = 0
 last_performance_check = 0
+
+#Length of weight vector (L2 score)
+global length_of_weight_vector
+length_of_weight_vector = []
 
 def performance_test(w):
     #Checking error
@@ -190,7 +194,8 @@ def minimizing_direction(w,x,t, i, e):
         global last_performance_check
         training_sets_evaluated += 1
         if training_sets_evaluated - last_performance_check >= error_check_interval:
-            performance_test(w)            
+            performance_test(w)
+            length_of_weight_vector.append(np.sqrt(np.sum(np.square(w))))
             last_performance_check = training_sets_evaluated
     
     gradient = gradient/number_of_training_sets
@@ -206,6 +211,7 @@ def gradient_descent(w, training_data_input, training_data_output):
 
     #Recording network performance for plotting
     performance_test(w)
+    length_of_weight_vector.append(L2_coeffisient*np.sum(np.square(w)))
 
     #Recording network performance for early stopping
     validation_data_early_stopping.append(error_vector_validation[-1][0])
@@ -238,6 +244,7 @@ def gradient_descent(w, training_data_input, training_data_output):
     
     #Recording network performance
     performance_test(w)
+    length_of_weight_vector.append(L2_coeffisient*np.sum(np.square(w)))
 
     #Finding best weight from weight history
     best_weight = validation_data_early_stopping[-1]
@@ -253,6 +260,10 @@ def gradient_descent(w, training_data_input, training_data_output):
 #Training a network
 weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
 
+print(np.shape(percent_correct_validation_vector))
+print(np.shape(length_of_weight_vector))
+input()
 #Serializing list to file, in order to plot for several lambda values in task 2.2 bcd
-with open ('validation_data_lambda_0_0001', 'wb') as fp: pickle.dump(percent_correct_validation_vector, fp)
-with open ('weight_storage_lambda_0_0001', 'wb') as fp: pickle.dump(weight_storage, fp)
+#with open ('validation_data_lambda_0_0001', 'wb') as fp: pickle.dump(percent_correct_validation_vector, fp)
+#with open ('weight_storage_lambda_0_0001', 'wb') as fp: pickle.dump(weight_storage, fp)
+with open ('length_of_weight_vector_0_0001','wb') as fp: pickle.dump(length_of_weight_vector,fp)

@@ -1,0 +1,15 @@
+#Data settings
+training_data_size = 11000
+validation_data_size = 500
+testing_data_size = 1000
+
+#Hypervariables
+epoch = 15
+batch_size = 5
+initial_learning_rate = 0.001 #Initial annealing learning rate
+L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
+T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
+early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
+
+#Error storage
+number_of_error_check_per_epoch = 10
