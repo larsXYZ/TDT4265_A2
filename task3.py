@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import pickle
 
 #Data settings
-training_data_size = 5000
-validation_data_size = 400
-testing_data_size = 100
+training_data_size = 5000*5
+validation_data_size = 400*5
+testing_data_size = 100*5
 
 #Loading data from MNIST dataset
 X_train, Y_train, X_test, Y_test = mnist.load()
@@ -42,15 +42,16 @@ print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_
 input()
 
 #Hypervariables
-epoch = 10
+epoch = 5
 batch_size = 10
 initial_learning_rate = 0.01 #Initial annealing learning rate
 L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
 T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
 early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
 
-
 #Error storage
+number_of_error_check_per_epoch = 10
+error_check_interval = training_data_size / number_of_error_check_per_epoch
 error_vector_training = []
 error_vector_validation = []
 error_vector_test = []
@@ -61,6 +62,11 @@ percent_correct_testing_vector = []
 #Initializing weights
 weights = np.random.rand(10,785)
 
+#Keeping track of our performance testing
+global training_sets_evaluated
+global last_performance_check
+training_sets_evaluated = 0
+last_performance_check = 0
 
 def update_error_vectors(w):
     #Checking error
@@ -77,6 +83,7 @@ def update_error_vectors(w):
     error_vector_training.append(error_training/training_data_size)
     error_vector_validation.append(error_validation/validation_data_size)
     error_vector_test.append(error_test/testing_data_size)
+
 
 def learning_rate(i, e): #Annealing learning rate
     return initial_learning_rate/(1+(i+training_data_size*e)/T)
@@ -117,7 +124,7 @@ def percent_correct_test(w,input_data,output_data):
         confidence += np.sqrt(c)
 
     confidence = 1 - confidence/testing_data_size
-
+    print(correct,false)
     return correct/(correct+false)
 
 def data_set_test(w, input_data, output_data): #Returns total error from data set
@@ -177,6 +184,14 @@ def minimizing_direction(w,x,t, i, e):
 
         i += 1
 
+        #Checking if we should do a performance check of our network
+        global training_sets_evaluated
+        global last_performance_check
+        training_sets_evaluated += 1
+        if training_sets_evaluated - last_performance_check >= error_check_interval:
+            update_error_vectors(w)
+            last_performance_check = training_sets_evaluated
+
     gradient = gradient/number_of_training_sets
 
     return (-learning_rate(i, e)*gradient, i)
@@ -185,43 +200,59 @@ def gradient_descent(w, training_data_input, training_data_output):
 
     #Storing previous weights for early stopping
     weight_storage = []
+    validation_data_early_stopping = []
     weight_storage.append(w)
+
+    #Recording network performance for plotting
+    update_error_vectors(w)
+
+    #Recording network performance for early stopping
+    validation_data_early_stopping.append(error_vector_validation[-1])
+
+
 
     for e in range(epoch):
 
         i = 0
-        i_last_update = 0
-        update_error_vectors(w)
 
         #Running training data
         while i < training_data_size:
             min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
             w = w - min_dir
 
-            #Updating error vectors
-            if (i - i_last_update >= training_data_size/4):
-                update_error_vectors(w)
-                i_last_update = i
-
         print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", error_vector_validation[-1])
 
+        #Recording state for early stopping
         weight_storage.append(w)
-        
+
+        validation_data_early_stopping.append(error_vector_validation[-1])
+
+        print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", validation_data_early_stopping[-1])
+
         #Early stopping test
         validation_only_increasing = True
-        if (e >= early_stopping_threshold-1):
+        if (epoch > early_stopping_threshold):
             for i in range(early_stopping_threshold):
-                if error_vector_validation[-i-1] < error_vector_validation[-i-2]:
+                if validation_data_early_stopping[-i-1] <= validation_data_early_stopping[-i-2]:
                     validation_only_increasing = False
                     break
             if validation_only_increasing:
                 print("EARLY STOPPING: Validation error function increased ", early_stopping_threshold, " times in a row. Stopping training")
                 return weight_storage[-1-i], weight_storage
 
-
+    #Recording network performance
     update_error_vectors(w)
 
-    return w, weight_storage
+    #Finding best weight from weight history
+    best_weight = validation_data_early_stopping[-1]
+    best_epoch = epoch
+    for i in range(early_stopping_threshold):
+        if validation_data_early_stopping[-1-i] < validation_data_early_stopping[best_epoch]:
+            best_weight = weight_storage[-1-i]
+            best_epoch = epoch - i
+
+    print("Training finished: Returning weights from epoch ", best_epoch, "With validation score ", validation_data_early_stopping[best_epoch])
+    return best_weight, weight_storage
 
 
 #Training a network
@@ -235,3 +266,4 @@ with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_tes
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_training_vector','wb') as fp: pickle.dump(percent_correct_training_vector,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_validation_vector','wb') as fp: pickle.dump(percent_correct_validation_vector,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_testing_vector','wb') as fp: pickle.dump(percent_correct_testing_vector,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/weights','wb') as fp: pickle.dump(weights,fp)
