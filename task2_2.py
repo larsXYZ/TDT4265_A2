@@ -23,25 +23,16 @@ X_test = np.concatenate((X_test,np.ones([10000,1])), axis=1)
 #Filtering out all other values than 2 and 3
 X_train = X_train[(Y_train == 2) | (Y_train == 3)]
 Y_train = (Y_train[(Y_train == 2) | (Y_train == 3)] == 2).astype(int)
-
 X_test = X_test[(Y_test == 2) | (Y_test == 3)]
 Y_test = (Y_test[(Y_test == 2) | (Y_test == 3)] == 2).astype(int)
 
 #Selecting training data and validation data
 training_data_input = X_train[0:training_data_size,:].copy()
 training_data_output = Y_train[0:training_data_size].copy()
-
 validation_data_input = X_train[training_data_size:training_data_size+validation_data_size].copy()
 validation_data_output = Y_train[training_data_size:training_data_size+validation_data_size].copy()
-
 testing_data_input = X_test[-testing_data_size:].copy()
 testing_data_output = Y_test[-testing_data_size:].copy()
-
-print("Training and testing samples: ", np.shape(Y_train)[0], ", ", np.shape(Y_test)[0] )
-print("Training data shape:",np.shape(training_data_input), np.shape(training_data_output))
-print("Validation data shape:",np.shape(validation_data_input), np.shape(validation_data_output))
-print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_output))
-input()
 
 #Hypervariables
 epoch = 15
@@ -75,29 +66,24 @@ global length_of_weight_vector
 length_of_weight_vector = []
 
 def performance_test(w):
-    #Checking error
-    error_training = data_set_test(w,training_data_input,training_data_output)
-    error_validation = data_set_test(w,validation_data_input,validation_data_output)
-    error_test = data_set_test(w,testing_data_input, testing_data_output)
-
     #Checking percentage correct
     percent_correct_training_vector.append(percent_correct_test(w, training_data_input, training_data_output))
     percent_correct_validation_vector.append(percent_correct_test(w, validation_data_input, validation_data_output))
     percent_correct_testing_vector.append(percent_correct_test(w, testing_data_input, testing_data_output))
 
-    #Updating storage
-    error_vector_training.append(error_training/training_data_size)
-    error_vector_validation.append(error_validation/validation_data_size)
-    error_vector_test.append(error_test/testing_data_size)
+    #Checking error function
+    error_vector_training.append(data_set_test(w,training_data_input,training_data_output)/training_data_size)
+    error_vector_validation.append(data_set_test(w,validation_data_input,validation_data_output)/validation_data_size)
+    error_vector_test.append(data_set_test(w,testing_data_input, testing_data_output)/testing_data_size)
 
 def learning_rate(): #Annealing learning rate
 
     return initial_learning_rate/(1+(training_sets_evaluated)/T)
 
-def g(y_n):
+def g(y_n): #Activation function
     return 1/(1+np.exp(-y_n))
 
-def percent_correct_test(w,input_data,output_data):
+def percent_correct_test(w,input_data,output_data): #Calculates the percentage of correct answers a network provides
     
     #Input check
     data_length = np.shape(input_data)[0]
@@ -160,17 +146,16 @@ def error_function(y_n,t_n):
 def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
     return error_function(y_n, t_n) + L2_coeffisient*np.sum(np.square(w))
 
-def feed_forward(w,x_n):
+def feed_forward(w,x_n): #Gives output of a network provided an input vector
     return g(np.dot(w,x_n))
 
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
-    
     return np.outer((t_n-y_n), x_n)
 
 def gradient_function_L2(w,x_n,y_n,t_n):
     return gradient_function(x_n,y_n,t_n) + 2 * L2_coeffisient * w
 
-def minimizing_direction(w,x,t, i, e):
+def stochastic_gradient_descent(w,x,t, i, e):
 
     gradient = np.zeros([1,785])
 
@@ -200,9 +185,9 @@ def minimizing_direction(w,x,t, i, e):
     
     gradient = gradient/number_of_training_sets
 
-    return (-learning_rate()*gradient, i)
+    return (gradient, i)
 
-def gradient_descent(w, training_data_input, training_data_output):
+def train_network(w, training_data_input, training_data_output):
 
     #Storing previous weights for early stopping
     weight_storage = []
@@ -222,8 +207,8 @@ def gradient_descent(w, training_data_input, training_data_output):
 
         #Running training data
         while i < training_data_size:
-            min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
-            w = w - min_dir
+            gradient, i = stochastic_gradient_descent(w,training_data_input,training_data_output, i, e)
+            w = w + learning_rate()*gradient
             
         #Recording state for early stopping
         weight_storage.append(w)
@@ -258,12 +243,4 @@ def gradient_descent(w, training_data_input, training_data_output):
     return best_weight, weight_storage
     
 #Training a network
-weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
-
-print(np.shape(percent_correct_validation_vector))
-print(np.shape(length_of_weight_vector))
-input()
-#Serializing list to file, in order to plot for several lambda values in task 2.2 bcd
-#with open ('validation_data_lambda_0_0001', 'wb') as fp: pickle.dump(percent_correct_validation_vector, fp)
-#with open ('weight_storage_lambda_0_0001', 'wb') as fp: pickle.dump(weight_storage, fp)
-with open ('length_of_weight_vector_0_0001','wb') as fp: pickle.dump(length_of_weight_vector,fp)
+weights, weight_storage = train_network(weights, training_data_input,training_data_output)

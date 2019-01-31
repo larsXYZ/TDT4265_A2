@@ -23,25 +23,16 @@ X_test = np.concatenate((X_test,np.ones([10000,1])), axis=1)
 #Filtering out all other values than 2 and 3
 X_train = X_train[(Y_train == 2) | (Y_train == 3)]
 Y_train = (Y_train[(Y_train == 2) | (Y_train == 3)] == 2).astype(int)
-
 X_test = X_test[(Y_test == 2) | (Y_test == 3)]
 Y_test = (Y_test[(Y_test == 2) | (Y_test == 3)] == 2).astype(int)
 
 #Selecting training data and validation data
 training_data_input = X_train[0:training_data_size,:].copy()
 training_data_output = Y_train[0:training_data_size].copy()
-
 validation_data_input = X_train[training_data_size:training_data_size+validation_data_size].copy()
 validation_data_output = Y_train[training_data_size:training_data_size+validation_data_size].copy()
-
 testing_data_input = X_test[-testing_data_size:].copy()
 testing_data_output = Y_test[-testing_data_size:].copy()
-
-print("Training and testing samples: ", np.shape(Y_train)[0], ", ", np.shape(Y_test)[0] )
-print("Training data shape:",np.shape(training_data_input), np.shape(training_data_output))
-print("Validation data shape:",np.shape(validation_data_input), np.shape(validation_data_output))
-print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_output))
-input()
 
 #Hypervariables
 epoch = 15
@@ -50,8 +41,8 @@ learning_rate = 0.03 #Learning rate
 early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
 
 #Error storage
-number_of_error_check_per_epoch = 10
-error_check_interval = training_data_size / number_of_error_check_per_epoch
+number_of_performance_tests_per_epoch = 10
+error_check_interval = training_data_size / number_of_performance_tests_per_epoch
 error_vector_training = []
 error_vector_validation = []
 error_vector_test = []
@@ -69,25 +60,20 @@ training_sets_evaluated = 0
 last_performance_check = 0
 
 def performance_test(w):
-    #Checking error
-    error_training = data_set_test(w,training_data_input,training_data_output)
-    error_validation = data_set_test(w,validation_data_input,validation_data_output)
-    error_test = data_set_test(w,testing_data_input, testing_data_output)
-
     #Checking percentage correct
     percent_correct_training_vector.append(percent_correct_test(w, training_data_input, training_data_output))
     percent_correct_validation_vector.append(percent_correct_test(w, validation_data_input, validation_data_output))
     percent_correct_testing_vector.append(percent_correct_test(w, testing_data_input, testing_data_output))
 
-    #Updating storage
-    error_vector_training.append(error_training/training_data_size)
-    error_vector_validation.append(error_validation/validation_data_size)
-    error_vector_test.append(error_test/testing_data_size)
+    #Checking error function
+    error_vector_training.append(data_set_test(w,training_data_input,training_data_output)/training_data_size)
+    error_vector_validation.append(data_set_test(w,validation_data_input,validation_data_output)/validation_data_size)
+    error_vector_test.append(data_set_test(w,testing_data_input, testing_data_output)/testing_data_size)
 
-def g(y_n):
+def g(y_n): #Activation function
     return 1/(1+np.exp(-y_n))
 
-def percent_correct_test(w,input_data,output_data):
+def percent_correct_test(w,input_data,output_data): #Calculates the percentage of correct answers a network provides
     
     #Input check
     data_length = np.shape(input_data)[0]
@@ -145,16 +131,15 @@ def data_set_test(w, input_data, output_data): #Returns total error from data se
     return error_sum
 
 def error_function(y_n,t_n):
-    return -(t_n*np.log(0.001+y_n) + (1-t_n)*np.log(1.001-y_n))
+    return -(t_n*np.log(0.001+y_n) + (1-t_n)*np.log(1.001-y_n)) #Adding small values to avoid singularities
 
-def feed_forward(w,x_n):
+def feed_forward(w,x_n): #Gives output of a network provided an input vector
     return g(np.dot(w,x_n))
 
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
-    
     return np.outer((t_n-y_n), x_n)
 
-def minimizing_direction(w,x,t, i, e):
+def stochastic_gradient_descent(w,x,t,i,e):
 
     gradient = np.zeros([1,785])
 
@@ -183,9 +168,9 @@ def minimizing_direction(w,x,t, i, e):
     
     gradient = gradient/number_of_training_sets
 
-    return (-learning_rate*gradient, i)
+    return (gradient, i)
 
-def gradient_descent(w, training_data_input, training_data_output):
+def train_network(w, training_data_input, training_data_output):
 
     #Storing previous weights for early stopping
     weight_storage = []
@@ -204,8 +189,8 @@ def gradient_descent(w, training_data_input, training_data_output):
 
         #Running training data
         while i < training_data_size:
-            min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
-            w = w - min_dir
+            gradient, i = stochastic_gradient_descent(w,training_data_input,training_data_output, i, e)
+            w = w + learning_rate*gradient
             
         #Recording state for early stopping
         weight_storage.append(w)
@@ -237,22 +222,6 @@ def gradient_descent(w, training_data_input, training_data_output):
             
     print("Training finished: Returning weights from epoch ", best_epoch, "With validation score ", validation_data_early_stopping[best_epoch])
     return best_weight, weight_storage
-    
+
 #Training a network
-weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
-
-#Plotting
-x = np.linspace(0,epoch,len(error_vector_training))
-#plt.plot(x,error_vector_training, label = 'training error')
-#plt.plot(x,error_vector_validation, label = 'validation error')
-#plt.plot(x,error_vector_test, label = 'testing error')
-plt.plot(x,percent_correct_training_vector, label = 'correct training data')
-plt.plot(x,percent_correct_validation_vector, label = 'correct validation data')
-plt.plot(x,percent_correct_testing_vector, label = 'correct testing data')
-plt.xlabel("Epoch")
-plt.ylabel("Probability ")
-
-plt.plot()
-plt.legend()
-plt.grid(linestyle='-', linewidth=1)
-plt.show()
+weights, weight_storage = train_network(weights, training_data_input,training_data_output)
