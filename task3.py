@@ -17,7 +17,7 @@ X_train = X_train/255
 X_test = X_test/255
 
 #Performing the "bias trick"
-X_train = np.concatenate((X_train[:][0:60000],np.ones([60000,1])),axis=1)
+X_train = np.concatenate((X_train,np.ones([60000,1])),axis=1)
 X_test = np.concatenate((X_test,np.ones([10000,1])), axis=1)
 
 #Selecting training data and validation data
@@ -34,12 +34,6 @@ testing_data_output = Y_test[-testing_data_size:].copy()
 training_data_output = ohe.one_hot_encoding(training_data_output)
 validation_data_output = ohe.one_hot_encoding(validation_data_output)
 testing_data_output = ohe.one_hot_encoding(testing_data_output)
-
-print("Training and testing samples: ", np.shape(Y_train)[0], ", ", np.shape(Y_test)[0] )
-print("Training data shape:",np.shape(training_data_input), np.shape(training_data_output))
-print("Validation data shape:",np.shape(validation_data_input), np.shape(validation_data_output))
-print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_output))
-input()
 
 #Hypervariables
 epoch = 5
@@ -91,7 +85,7 @@ def learning_rate(i, e): #Annealing learning rate
 def g(y_n):
     return 1/(1+np.exp(-y_n))
 
-def percent_correct_test(w,input_data,output_data):
+def percent_correct_test(w,input_data,output_data): #Calculates the percentage of correct answers a network provides
 
     #Input check
     data_length = np.shape(input_data)[0]
@@ -102,6 +96,7 @@ def percent_correct_test(w,input_data,output_data):
 
     #Threshold for an output to be considered correct
     correct_threshold = 0.5
+
     #Testing sums
     correct = 0
     false = 0
@@ -123,7 +118,6 @@ def percent_correct_test(w,input_data,output_data):
         confidence += np.sqrt(c)
 
     confidence = 1 - confidence/testing_data_size
-    print(correct,false)
     return correct/(correct+false)
 
 def data_set_test(w, input_data, output_data): #Returns total error from data set
@@ -153,7 +147,7 @@ def error_function(y_n,t_n):
 def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
     return error_function(y_n, t_n) + np.sum(np.square(w))
 
-def feed_forward(w,x_n):
+def feed_forward(w,x_n): #Gives output of a network provided an input vector
     return g(np.dot(w,x_n))
 
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
@@ -163,7 +157,7 @@ def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
 def gradient_function_L2(w,x_n,y_n,t_n):
     return gradient_function(x_n,y_n,t_n) + 2 * L2_coeffisient * w
 
-def minimizing_direction(w,x,t, i, e):
+def stochastic_gradient_descent(w,x,t, i, e):
 
     gradient = np.zeros([10,785])
 
@@ -180,7 +174,6 @@ def minimizing_direction(w,x,t, i, e):
         #Performing gradient descent
         gradient += gradient_function_L2(w,x_n,y_n,t_n)
 
-
         i += 1
 
         #Checking if we should do a performance check of our network
@@ -195,7 +188,7 @@ def minimizing_direction(w,x,t, i, e):
 
     return (-learning_rate(i, e)*gradient, i)
 
-def gradient_descent(w, training_data_input, training_data_output):
+def train_network(w, training_data_input, training_data_output):
 
     #Storing previous weights for early stopping
     weight_storage = []
@@ -208,28 +201,24 @@ def gradient_descent(w, training_data_input, training_data_output):
     #Recording network performance for early stopping
     validation_data_early_stopping.append(error_vector_validation[0])
 
-
-
     for e in range(epoch):
 
         i = 0
 
         #Running training data
         while i < training_data_size:
-            min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
+            min_dir, i = stochastic_gradient_descent(w,training_data_input,training_data_output, i, e)
             w = w - min_dir
 
         print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", error_vector_validation[-1])
 
         #Recording state for early stopping
         weight_storage.append(w)
-
         validation_data_early_stopping.append(error_vector_validation[0])
 
         print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", validation_data_early_stopping[-1])
 
         #Early stopping test
-
         validation_only_increasing = True
         if (epoch > early_stopping_threshold):
             for i in range(early_stopping_threshold):
@@ -239,6 +228,7 @@ def gradient_descent(w, training_data_input, training_data_output):
             if validation_only_increasing:
                 print("EARLY STOPPING: Validation error function increased ", early_stopping_threshold, " times in a row. Stopping training")
                 return weight_storage[-1-i], weight_storage
+
     #Recording network performance
     update_error_vectors(w)
 
@@ -254,15 +244,5 @@ def gradient_descent(w, training_data_input, training_data_output):
     print("Training finished: Returning weights from epoch ", best_epoch, "With validation score ", validation_data_early_stopping[best_epoch])
     return best_weight, weight_storage
 
-
 #Training a network
-weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
-
-#Saving data for plotting purposes
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_training','wb') as fp: pickle.dump(error_vector_training,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_validation','wb') as fp: pickle.dump(error_vector_validation,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_test','wb') as fp: pickle.dump(error_vector_test,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_training_vector','wb') as fp: pickle.dump(percent_correct_training_vector,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_validation_vector','wb') as fp: pickle.dump(percent_correct_validation_vector,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_testing_vector','wb') as fp: pickle.dump(percent_correct_testing_vector,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/weights_01','wb') as fp: pickle.dump(weight_storage,fp)
+weights, weight_storage = train_network(weights, training_data_input,training_data_output)
