@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import pickle
 
 #Data settings
-training_data_size = 5000*5
-validation_data_size = 400*5
-testing_data_size = 100*5
+training_data_size = 55000
+validation_data_size = 5000
+testing_data_size = 10000
 
 #Loading data from MNIST dataset
 X_train, Y_train, X_test, Y_test = mnist.load()
@@ -17,7 +17,7 @@ X_train = X_train/255
 X_test = X_test/255
 
 #Performing the "bias trick"
-X_train = np.concatenate((X_train,np.ones([60000,1])), axis=1)
+X_train = np.concatenate((X_train[:][0:60000],np.ones([60000,1])),axis=1)
 X_test = np.concatenate((X_test,np.ones([10000,1])), axis=1)
 
 #Selecting training data and validation data
@@ -102,7 +102,6 @@ def percent_correct_test(w,input_data,output_data):
 
     #Threshold for an output to be considered correct
     correct_threshold = 0.5
-
     #Testing sums
     correct = 0
     false = 0
@@ -207,7 +206,7 @@ def gradient_descent(w, training_data_input, training_data_output):
     update_error_vectors(w)
 
     #Recording network performance for early stopping
-    validation_data_early_stopping.append(error_vector_validation[-1])
+    validation_data_early_stopping.append(error_vector_validation[0])
 
 
 
@@ -225,11 +224,12 @@ def gradient_descent(w, training_data_input, training_data_output):
         #Recording state for early stopping
         weight_storage.append(w)
 
-        validation_data_early_stopping.append(error_vector_validation[-1])
+        validation_data_early_stopping.append(error_vector_validation[0])
 
         print("Epoch: ", e+1, " | Learning rate: ", learning_rate(training_data_size-1,e), " | Validation error: ", validation_data_early_stopping[-1])
 
         #Early stopping test
+
         validation_only_increasing = True
         if (epoch > early_stopping_threshold):
             for i in range(early_stopping_threshold):
@@ -239,7 +239,6 @@ def gradient_descent(w, training_data_input, training_data_output):
             if validation_only_increasing:
                 print("EARLY STOPPING: Validation error function increased ", early_stopping_threshold, " times in a row. Stopping training")
                 return weight_storage[-1-i], weight_storage
-
     #Recording network performance
     update_error_vectors(w)
 
@@ -247,6 +246,7 @@ def gradient_descent(w, training_data_input, training_data_output):
     best_weight = validation_data_early_stopping[-1]
     best_epoch = epoch
     for i in range(early_stopping_threshold):
+        #if len(validation_data_early_stopping) > abs(-1-i):
         if validation_data_early_stopping[-1-i] < validation_data_early_stopping[best_epoch]:
             best_weight = weight_storage[-1-i]
             best_epoch = epoch - i
@@ -259,11 +259,10 @@ def gradient_descent(w, training_data_input, training_data_output):
 weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
 
 #Saving data for plotting purposes
-
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_training','wb') as fp: pickle.dump(error_vector_training,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_validation','wb') as fp: pickle.dump(error_vector_validation,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/error_vector_test','wb') as fp: pickle.dump(error_vector_test,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_training_vector','wb') as fp: pickle.dump(percent_correct_training_vector,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_validation_vector','wb') as fp: pickle.dump(percent_correct_validation_vector,fp)
 with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/percent_correct_testing_vector','wb') as fp: pickle.dump(percent_correct_testing_vector,fp)
-with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/weights','wb') as fp: pickle.dump(weights,fp)
+with open('/home/fenics/Documents/datasyn/TDT4265_A1/task3_data/weights_01','wb') as fp: pickle.dump(weight_storage,fp)
