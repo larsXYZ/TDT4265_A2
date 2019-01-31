@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import pickle
 
 #Data settings
-training_data_size = 11000
-validation_data_size = 500
+training_data_size = 55000
+validation_data_size = 4000
 testing_data_size = 1000
 
 #Loading data from MNIST dataset
@@ -20,13 +20,6 @@ X_test = X_test/255
 X_train = np.concatenate((X_train,np.ones([60000,1])), axis=1)
 X_test = np.concatenate((X_test,np.ones([10000,1])), axis=1)
 
-#Filtering out all other values than 2 and 3
-X_train = X_train[(Y_train == 2) | (Y_train == 3)]
-Y_train = (Y_train[(Y_train == 2) | (Y_train == 3)] == 2).astype(int)
-
-X_test = X_test[(Y_test == 2) | (Y_test == 3)]
-Y_test = (Y_test[(Y_test == 2) | (Y_test == 3)] == 2).astype(int)
-
 #Selecting training data and validation data
 training_data_input = X_train[0:training_data_size,:].copy()
 training_data_output = Y_train[0:training_data_size].copy()
@@ -37,6 +30,11 @@ validation_data_output = Y_train[training_data_size:training_data_size+validatio
 testing_data_input = X_test[-testing_data_size:].copy()
 testing_data_output = Y_test[-testing_data_size:].copy()
 
+#One hot encode the wanted results
+training_data_output = ohe.one_hot_encoding(training_data_output)
+validation_data_output = ohe.one_hot_encoding(validation_data_output)
+testing_data_output = ohe.one_hot_encoding(testing_data_output)
+
 print("Training and testing samples: ", np.shape(Y_train)[0], ", ", np.shape(Y_test)[0] )
 print("Training data shape:",np.shape(training_data_input), np.shape(training_data_output))
 print("Validation data shape:",np.shape(validation_data_input), np.shape(validation_data_output))
@@ -44,10 +42,13 @@ print("Testing data shape:",np.shape(testing_data_input), np.shape(testing_data_
 input()
 
 #Hypervariables
-epoch = 15
-batch_size = 5
-learning_rate = 0.03 #Learning rate
+epoch = 10
+batch_size = 50
+initial_learning_rate = 0.0001 #Initial annealing learning rate
+L2_coeffisient = 0.0001 #L2 coefficient punishing model complexity, bigger -> less complex weights
+T = 300000 #Annealing learning rate time constant, bigger -> slower decrease of learning rate
 early_stopping_threshold = 3 # If validation score increases several times in a row, we cancel
+alpha = 0.9 #Momentum descent 
 
 #Error storage
 number_of_error_check_per_epoch = 10
@@ -59,8 +60,8 @@ percent_correct_training_vector = []
 percent_correct_validation_vector = []
 percent_correct_testing_vector = []
 
-#Initializing weights 
-weights = np.random.normal(size=(1,785))
+#Initializing weights
+weights = np.random.rand(10,785)
 
 #Keeping track of our performance testing
 global training_sets_evaluated
@@ -68,7 +69,7 @@ global last_performance_check
 training_sets_evaluated = 0
 last_performance_check = 0
 
-def performance_test(w):
+def update_error_vectors(w):
     #Checking error
     error_training = data_set_test(w,training_data_input,training_data_output)
     error_validation = data_set_test(w,validation_data_input,validation_data_output)
@@ -84,11 +85,15 @@ def performance_test(w):
     error_vector_validation.append(error_validation/validation_data_size)
     error_vector_test.append(error_test/testing_data_size)
 
+
+def learning_rate(): #Annealing learning rate
+    return initial_learning_rate/(1+(training_sets_evaluated)/T)
+
 def g(y_n):
     return 1/(1+np.exp(-y_n))
 
 def percent_correct_test(w,input_data,output_data):
-    
+
     #Input check
     data_length = np.shape(input_data)[0]
     if np.shape(output_data)[0] != data_length:
@@ -109,22 +114,21 @@ def percent_correct_test(w,input_data,output_data):
         x_n = input_data[i]
         y_n = feed_forward(w,x_n)
         t_n = output_data[i]
-        
-        c = (t_n-y_n)**2
+
+        c = (1-y_n[ohe.one_hot_encoding_inverse(t_n)])**2
 
         if c < correct_threshold**2:
             correct += 1
         else:
             false += 1
-        
-        confidence += np.sqrt(c)
-    
-    confidence = 1 - confidence/testing_data_size
 
+        confidence += np.sqrt(c)
+
+    confidence = 1 - confidence/testing_data_size
     return correct/(correct+false)
 
 def data_set_test(w, input_data, output_data): #Returns total error from data set
-    
+
     #Input check
     data_length = np.shape(input_data)[0]
     if np.shape(output_data)[0] != data_length:
@@ -140,23 +144,29 @@ def data_set_test(w, input_data, output_data): #Returns total error from data se
         t_val_n = output_data[i]
         y_val_n = feed_forward(w,x_val_n)
 
-        error_sum += error_function(y_val_n,t_val_n)
+        error_sum += error_function_L2(w,y_val_n,t_val_n)
 
     return error_sum
 
 def error_function(y_n,t_n):
-    return -(t_n*np.log(0.001+y_n) + (1-t_n)*np.log(1.001-y_n))
+    return np.sum(np.dot(t_n,np.log(y_n+0.0001)))
+
+def error_function_L2(w,y_n,t_n): #Error function with L2 regularization
+    return error_function(y_n, t_n) + np.sum(np.square(w))
 
 def feed_forward(w,x_n):
     return g(np.dot(w,x_n))
 
 def gradient_function(x_n,y_n,t_n): #Returns gradient with given testing data
-    
+
     return np.outer((t_n-y_n), x_n)
 
-def minimizing_direction(w,x,t, i, e):
+def gradient_function_L2(w,x_n,y_n,t_n):
+    return gradient_function(x_n,y_n,t_n) + 2 * L2_coeffisient * w
 
-    gradient = np.zeros([1,785])
+def stochastic_gradient(w,x,t, i, e):
+
+    gradient = np.zeros([10,785])
 
     number_of_training_sets = min(batch_size,training_data_size-i)
     if number_of_training_sets <= 0: return 0
@@ -169,7 +179,8 @@ def minimizing_direction(w,x,t, i, e):
         t_n = t[i]
 
         #Performing gradient descent
-        gradient += gradient_function(x_n,y_n,t_n)
+        gradient += gradient_function_L2(w,x_n,y_n,t_n)
+
 
         i += 1
 
@@ -178,14 +189,17 @@ def minimizing_direction(w,x,t, i, e):
         global last_performance_check
         training_sets_evaluated += 1
         if training_sets_evaluated - last_performance_check >= error_check_interval:
-            performance_test(w)
+            update_error_vectors(w)
             last_performance_check = training_sets_evaluated
-    
+
     gradient = gradient/number_of_training_sets
 
-    return (-learning_rate*gradient, i)
+    return (gradient, i)
 
-def gradient_descent(w, training_data_input, training_data_output):
+def nesterov_momentum_descent(w, training_data_input, training_data_output):
+
+    #Momentum variables
+    weight_velocity = np.zeros([10,785])
 
     #Storing previous weights for early stopping
     weight_storage = []
@@ -193,29 +207,34 @@ def gradient_descent(w, training_data_input, training_data_output):
     weight_storage.append(w)
 
     #Recording network performance for plotting
-    performance_test(w)
+    update_error_vectors(w)
 
     #Recording network performance for early stopping
-    validation_data_early_stopping.append(error_vector_validation[-1][0])
+    validation_data_early_stopping.append(error_vector_validation[-1])
 
     for e in range(epoch):
-        
+
         i = 0
 
         #Running training data
         while i < training_data_size:
-            min_dir, i = minimizing_direction(w,training_data_input,training_data_output, i, e)
-            w = w - min_dir
-            
+
+            w_temp = w + alpha*weight_velocity #The nesterov momentum method
+
+            gradient, i = stochastic_gradient(w_temp,training_data_input,training_data_output, i, e)
+            weight_velocity = alpha*weight_velocity - learning_rate()*gradient 
+
+            w = w - weight_velocity
+
         #Recording state for early stopping
         weight_storage.append(w)
-        validation_data_early_stopping.append(error_vector_validation[-1][0])
+        validation_data_early_stopping.append(error_vector_validation[-1])
 
-        print("Epoch: ", e+1, " | Learning rate: ", learning_rate, " | Validation error: ", validation_data_early_stopping[-1], " | Percentage correctly guessed (validation data set)",  percent_correct_validation_vector[-1])
+        print("Epoch: ", e+1, " | Learning rate: ", learning_rate(), " | Validation error: ", validation_data_early_stopping[-1], " | Percentage correctly guessed (validation data set)",  percent_correct_validation_vector[-1], "Sum of weight velocity (Nesterov momentum): ", np.sum(weight_velocity))
 
         #Early stopping test
         validation_only_increasing = True
-        if (e >= early_stopping_threshold-1):
+        if (epoch > early_stopping_threshold):
             for i in range(early_stopping_threshold):
                 if validation_data_early_stopping[-i-1] <= validation_data_early_stopping[-i-2]:
                     validation_only_increasing = False
@@ -223,9 +242,9 @@ def gradient_descent(w, training_data_input, training_data_output):
             if validation_only_increasing:
                 print("EARLY STOPPING: Validation error function increased ", early_stopping_threshold, " times in a row. Stopping training")
                 return weight_storage[-1-i], weight_storage
-    
+
     #Recording network performance
-    performance_test(w)
+    update_error_vectors(w)
 
     #Finding best weight from weight history
     best_weight = validation_data_early_stopping[-1]
@@ -234,25 +253,15 @@ def gradient_descent(w, training_data_input, training_data_output):
         if validation_data_early_stopping[-1-i] < validation_data_early_stopping[best_epoch]:
             best_weight = weight_storage[-1-i]
             best_epoch = epoch - i
-            
+
     print("Training finished: Returning weights from epoch ", best_epoch, "With validation score ", validation_data_early_stopping[best_epoch])
     return best_weight, weight_storage
-    
+
+
 #Training a network
-weights, weight_storage = gradient_descent(weights, training_data_input,training_data_output)
+weights, weight_storage = nesterov_momentum_descent(weights, training_data_input,training_data_output)
 
-#Plotting
+#Prepare the x axis values
 x = np.linspace(0,epoch,len(error_vector_training))
-#plt.plot(x,error_vector_training, label = 'training error')
-#plt.plot(x,error_vector_validation, label = 'validation error')
-#plt.plot(x,error_vector_test, label = 'testing error')
-plt.plot(x,percent_correct_training_vector, label = 'correct training data')
-plt.plot(x,percent_correct_validation_vector, label = 'correct validation data')
-plt.plot(x,percent_correct_testing_vector, label = 'correct testing data')
-plt.xlabel("Epoch")
-plt.ylabel("Probability ")
 
-plt.plot()
-plt.legend()
-plt.grid(linestyle='-', linewidth=1)
-plt.show()
+with open ('loss_vector_validation_nesterov','wb') as fp: pickle.dump(error_vector_validation,fp)
