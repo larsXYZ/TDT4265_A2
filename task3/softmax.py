@@ -184,10 +184,10 @@ max_epochs = 5
 hidden_layer_units = 64
 
 #Task3 parameters
-shuffle_after_epoch = True          #3a
-use_improved_sigmoid = True         #3b
-smart_weight_initialization = True  #3c
-use_momentum = True                 #3d
+shuffle_after_epoch = False          #3a
+use_improved_sigmoid = False         #3b
+smart_weight_initialization = False  #3c
+use_momentum = False                 #3d
 momentum_coeff = 0.9                #3d
 
 # Tracking variables
@@ -222,33 +222,49 @@ def train_loop():
 
             if i % check_step == 0:
                 # Loss
-                TRAIN_LOSS.append(cross_entropy_loss(X_train, Y_train, w_ji, w_kj))
-                TEST_LOSS.append(cross_entropy_loss(X_test, Y_test, w_ji, w_kj))
                 VAL_LOSS.append(cross_entropy_loss(X_val, Y_val, w_ji, w_kj))
-
-
-                TRAIN_ACC.append(calculate_accuracy(X_train, Y_train, w_ji, w_kj))
-                TEST_ACC.append(calculate_accuracy(X_test, Y_test, w_ji, w_kj))
-                VAL_ACC.append(calculate_accuracy(X_val, Y_val, w_ji, w_kj))
                 if should_early_stop(VAL_LOSS):
                     print(VAL_LOSS[-4:])
                     print("early stopping.")
                     return w_ji, w_kj
     return w_ji, w_kj
 
+#Testing the tricks of the trade
+
+#No tricks
+print("Task 3")
 w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss, without tricks")
+VAL_LOSS.clear()
 
-plt.plot(TRAIN_LOSS, label="Training loss")
-plt.plot(TEST_LOSS, label="Testing loss")
-plt.plot(VAL_LOSS, label="Validation loss")
+#3a
+print("Task 3a")
+shuffle_after_epoch = True
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss, w/shuffle")
+VAL_LOSS.clear()
+
+#3b
+print("Task 3b")
+use_improved_sigmoid = True
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid")
+VAL_LOSS.clear()
+
+#3c
+print("Task 3c")
+smart_weight_initialization = True
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid, smart.wgt.init")
+VAL_LOSS.clear()
+
+#3d
+print("Task 3d")
+use_momentum = True
+momentum_coeff = 0.9
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid, smart.wgt.init, momentum")
+VAL_LOSS.clear()
+
 plt.legend()
 plt.show()
-
-plt.clf()
-plt.plot(TRAIN_ACC, label="Training accuracy")
-plt.plot(TEST_ACC, label="Testing accuracy")
-plt.plot(VAL_ACC, label="Validation accuracy")
-plt.legend()
-plt.show()
-
-plt.clf()
