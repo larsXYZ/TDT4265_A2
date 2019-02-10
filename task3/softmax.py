@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 import mnist
 import tqdm
 
+def shuffle_data(X,Y):
+    rng_state = np.random.get_state()
+    np.random.shuffle(X)
+    np.random.set_state(rng_state)
+    np.random.shuffle(Y)
+
 def should_early_stop(validation_loss, num_steps=3):
     if len(validation_loss) < num_steps+1:
         return False
@@ -38,8 +44,14 @@ def bias_trick(X):
     return np.concatenate((X, np.ones((len(X), 1))), axis=1)
 
 def weight_initialization(input_unit,output_unit):
-    weight_shape = (output_unit,input_unit)
-    return np.random.uniform(-1,1,weight_shape)
+
+    if (smart_weight_initialization):
+        weight_shape = (output_unit,input_unit)
+        return np.random.normal(0,1/input_unit,weight_shape)
+    else:
+        weight_shape = (output_unit,input_unit)
+        return np.random.uniform(-1,1,weight_shape)
+
 
 def check_gradient(X, targets, w, epsilon, computed_gradient, layer):
     print("Checking gradient...")
@@ -61,6 +73,9 @@ def check_gradient(X, targets, w, epsilon, computed_gradient, layer):
 def sigmoid(a):
     return 1/(1 + np.exp(-a))
 
+def improved_sigmoid(a):
+    return 1.7157*np.tanh(2/3*a)
+
 def softmax(a):
     a_exp = np.exp(a)
     return a_exp / a_exp.sum(axis=1, keepdims=True)
@@ -71,7 +86,11 @@ def forward_output(hidden_layer, w_kj):
 
 def forward_hidden(X, w_ji):
     a = X.dot(w_ji.T)
-    return sigmoid(a)
+
+    if (use_improved_sigmoid):
+        return improved_sigmoid(a)
+    else:
+        return sigmoid(a)
 
 def calculate_accuracy(X, targets, w_ji, w_kj):
     hidden_layer = forward_hidden(X, w_ji)
@@ -114,7 +133,13 @@ def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, 
         check_gradient(hidden_layer, targets, w_kj, 1e-2,  dw_kj, 'output')
 
     #Gradient descent for weights between input layer and hidden layer
-    dz = hidden_layer*(1-hidden_layer)
+    if (use_improved_sigmoid):
+        z = X_batch.dot(w_ji.T)
+        dz = 1.14393/np.cosh(2/3*z)
+    else:
+        hidden_layer = forward_hidden(X_batch,w_ji)
+        dz = hidden_layer*(1-hidden_layer)
+    
     delta_j = dz*delta_k.dot(w_kj)
 
     dw_ji = delta_j.T.dot(X_batch)
@@ -139,7 +164,7 @@ X_train = bias_trick(X_train)
 X_test = bias_trick(X_test)
 Y_train, Y_test = onehot_encode(Y_train), onehot_encode(Y_test)
 
-X_train, Y_train, X_val, Y_val = train_val_split(X_train[:10000,:], Y_train[:10000,:], 0.1)
+X_train, Y_train, X_val, Y_val = train_val_split(X_train[:,:], Y_train[:,:], 0.1)
 
 # Hyperparameters
 batch_size = 128
@@ -149,6 +174,11 @@ should_check_gradient = False
 check_step = num_batches // 10
 max_epochs = 20
 hidden_layer_units = 64
+
+#Task3 parameters
+shuffle_after_epoch = True          #3a
+use_improved_sigmoid = True         #3b
+smart_weight_initialization = True  #3c
 
 # Tracking variables
 TRAIN_LOSS = []
@@ -163,6 +193,11 @@ def train_loop():
     w_ji = weight_initialization(X_train.shape[1],hidden_layer_units)
 
     for e in range(max_epochs): # Epochs
+
+        if (shuffle_after_epoch):
+            print("Randomizing training data...")
+            shuffle_data(X_train,Y_train)
+
         for i in tqdm.trange(num_batches):
             X_batch = X_train[i*batch_size:(i+1)*batch_size]
             Y_batch = Y_train[i*batch_size:(i+1)*batch_size]
@@ -187,28 +222,19 @@ def train_loop():
                     return w_ji, w_kj
     return w_ji, w_kj
 
-
 w_ji, w_kj = train_loop()
 
 plt.plot(TRAIN_LOSS, label="Training loss")
 plt.plot(TEST_LOSS, label="Testing loss")
 plt.plot(VAL_LOSS, label="Validation loss")
 plt.legend()
-#plt.ylim([0, 0.05])
 plt.show()
 
 plt.clf()
 plt.plot(TRAIN_ACC, label="Training accuracy")
 plt.plot(TEST_ACC, label="Testing accuracy")
 plt.plot(VAL_ACC, label="Validation accuracy")
-#plt.ylim([0.8, 1.0])
 plt.legend()
 plt.show()
 
 plt.clf()
-
-#w_kj = w_kj[:, :-1] # Remove bias
-#w_kj = w_kj.reshape(10, 28, 28)
-#w_kj = np.concatenate(w_kj, axis=0)
-#plt.imshow(w, cmap="gray")
-#plt.show()
