@@ -52,7 +52,6 @@ def weight_initialization(input_unit,output_unit):
         weight_shape = (output_unit,input_unit)
         return np.random.uniform(-1,1,weight_shape)
 
-
 def check_gradient(X, targets, w, epsilon, computed_gradient, layer):
     print("Checking gradient...")
     print('Shape', w.shape)
@@ -117,7 +116,7 @@ def cross_entropy_loss(X, targets, w_ji, w_kj):
     cross_entropy = -targets * log_y
     return cross_entropy.mean()
 
-def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, should_check_gradient):
+def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, should_check_gradient, w_kj_vel, w_ji_vel):
 
     #Gradient descent for weights between hidden layer and output layer
     normalization_factor = hidden_layer.shape[0] * targets.shape[1] # batch_size * num_classes
@@ -152,9 +151,18 @@ def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, 
         check_gradient(X_batch, hidden_layer, w_ji, 1e-2,  dw_ji, 'hidden')
 
     #Updating weights
-    w_kj = w_kj - learning_rate * dw_kj
-    w_ji = w_ji - dw_ji
-    return w_kj, w_ji
+    if (use_momentum):
+        w_kj_vel = momentum_coeff*w_kj_vel + learning_rate*dw_kj
+        w_ji_vel = momentum_coeff*w_ji_vel + learning_rate*dw_ji
+
+        w_kj -= w_kj_vel
+        w_ji -= w_ji_vel
+
+        return w_kj, w_ji, w_kj_vel, w_ji_vel
+    else:
+        w_kj = w_kj - learning_rate * dw_kj
+        w_ji = w_ji - learning_rate * dw_ji
+        return w_kj, w_ji, w_kj_vel, w_ji_vel
 
 X_train, Y_train, X_test, Y_test = mnist.load()
 
@@ -172,13 +180,15 @@ learning_rate = 0.5
 num_batches = X_train.shape[0] // batch_size
 should_check_gradient = False
 check_step = num_batches // 10
-max_epochs = 20
+max_epochs = 5
 hidden_layer_units = 64
 
 #Task3 parameters
 shuffle_after_epoch = True          #3a
 use_improved_sigmoid = True         #3b
 smart_weight_initialization = True  #3c
+use_momentum = True                 #3d
+momentum_coeff = 0.9                #3d
 
 # Tracking variables
 TRAIN_LOSS = []
@@ -192,6 +202,10 @@ def train_loop():
     w_kj = weight_initialization(hidden_layer_units,Y_train.shape[1])
     w_ji = weight_initialization(X_train.shape[1],hidden_layer_units)
 
+    w_kj_vel = np.zeros((Y_train.shape[1],hidden_layer_units))
+    w_ji_vel = np.zeros((hidden_layer_units,X_train.shape[1]))
+
+
     for e in range(max_epochs): # Epochs
 
         if (shuffle_after_epoch):
@@ -204,7 +218,7 @@ def train_loop():
 
             hidden_layer = forward_hidden(X_batch,w_ji)
 
-            w_kj, w_ji = gradient_descent(hidden_layer, Y_batch, X_batch, w_kj, w_ji,  learning_rate, should_check_gradient)
+            w_kj, w_ji, w_kj_vel, w_ji_vel = gradient_descent(hidden_layer, Y_batch, X_batch, w_kj, w_ji,  learning_rate, should_check_gradient, w_kj_vel, w_ji_vel)
 
             if i % check_step == 0:
                 # Loss
