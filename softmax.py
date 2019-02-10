@@ -128,7 +128,7 @@ def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, 
 
     #Updating weights
     w_kj = w_kj - learning_rate * dw_kj
-    w_ji = w_ji - dw_ji
+    w_ji = w_ji - learning_rate * dw_ji
     return w_kj, w_ji
 
 X_train, Y_train, X_test, Y_test = mnist.load()
@@ -139,7 +139,7 @@ X_train = bias_trick(X_train)
 X_test = bias_trick(X_test)
 Y_train, Y_test = onehot_encode(Y_train), onehot_encode(Y_test)
 
-X_train, Y_train, X_val, Y_val = train_val_split(X_train[:10000,:], Y_train[:10000,:], 0.1)
+X_train, Y_train, X_val, Y_val = train_val_split(X_train[:,:], Y_train[:,:], 0.1)
 
 # Hyperparameters
 batch_size = 128
