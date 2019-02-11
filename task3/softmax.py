@@ -179,7 +179,7 @@ batch_size = 128
 learning_rate = 0.5
 num_batches = X_train.shape[0] // batch_size
 should_check_gradient = False
-check_step = num_batches // 10
+check_step = num_batches // 15
 max_epochs = 5
 hidden_layer_units = 64
 
@@ -238,28 +238,28 @@ plt.plot(VAL_LOSS, label="Validation loss, without tricks")
 VAL_LOSS.clear()
 
 #3a
-print("Task 3a")
+print("\nTask 3a")
 shuffle_after_epoch = True
 w_ji, w_kj = train_loop()
 plt.plot(VAL_LOSS, label="Validation loss, w/shuffle")
 VAL_LOSS.clear()
 
 #3b
-print("Task 3b")
+print("\nTask 3b")
 use_improved_sigmoid = True
 w_ji, w_kj = train_loop()
 plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid")
 VAL_LOSS.clear()
 
 #3c
-print("Task 3c")
+print("\nTask 3c")
 smart_weight_initialization = True
 w_ji, w_kj = train_loop()
 plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid, smart.wgt.init")
 VAL_LOSS.clear()
 
 #3d
-print("Task 3d")
+print("\nTask 3d")
 use_momentum = True
 momentum_coeff = 0.9
 w_ji, w_kj = train_loop()
@@ -267,4 +267,5 @@ plt.plot(VAL_LOSS, label="Validation loss, w/shuffle, impr.sigmoid, smart.wgt.in
 VAL_LOSS.clear()
 
 plt.legend()
+plt.grid(color='grey', linestyle='-', linewidth=1)
 plt.show()

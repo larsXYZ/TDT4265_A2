@@ -1,0 +1,10 @@
+# Hyperparameters
+batch_size = 128
+learning_rate = 0.5
+num_batches = X_train.shape[0] // batch_size
+should_check_gradient = False
+check_step = num_batches // 15
+max_epochs = 5
+hidden_layer_units = 64
+
+full dataset
