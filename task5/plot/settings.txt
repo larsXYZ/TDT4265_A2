@@ -1,0 +1,28 @@
+5000 training samples
+
+expanded with 5000 modified samples
+
+# Hyperparameters
+batch_size = 128
+learning_rate = 0.5
+num_batches = X_train.shape[0] // batch_size
+should_check_gradient = False
+check_step = num_batches // 10
+max_epochs = 100
+hidden_layer_units = 64
+
+#Task3 parameters
+shuffle_after_epoch = False          #3a
+use_improved_sigmoid = False         #3b
+smart_weight_initialization = False  #3c
+use_momentum = False                 #3d
+momentum_coeff = 0.9                #3d
+
+    #Strengths of the available modifications, the limits of the probability density function.
+    blur_strength_range = (0.01,0.2)
+    shift_range = (-3,3)
+    agw_mean_range = (-10,10)
+    agw_std_range = (2,10)
+    rotation_range = (-1,1)
+
+AGW and BLUR DISABLED

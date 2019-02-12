@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mnist
 import tqdm
+import dataset_manipulation
+import pickle
 
 def shuffle_data(X,Y):
     rng_state = np.random.get_state()
@@ -164,15 +166,29 @@ def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, 
         w_ji = w_ji - learning_rate * dw_ji
         return w_kj, w_ji, w_kj_vel, w_ji_vel
 
-X_train, Y_train, X_test, Y_test = mnist.load()
+#Preparing dataset
+
+#Dataset size
+dataset_size = 5000
+
+X_train_full, Y_train_full, X_test, Y_test = mnist.load()
+
+#Generating more datasets by modifying the original
+X_train_modified, Y_train_modified = dataset_manipulation.generate_extra_datasets(X_train_full[:dataset_size], Y_train_full[:dataset_size])
+
+#Combining datasets
+X_Train_used = np.vstack((X_train_full[:dataset_size], X_train_modified))
+Y_Train_used = np.hstack((Y_train_full[:dataset_size], Y_train_modified))
+X_train, Y_train, X_val, Y_val = train_val_split(X_Train_used, Y_Train_used, 0.1)
 
 # Pre-process data
-X_train, X_test = (X_train/127.5)-1 , (X_test/127.5)-1      #Converting pixel values from [0,255] to [-1,1]
+X_train, X_val, X_test = (X_train/127.5)-1 , (X_val/127.5)-1, (X_test/127.5)-1      #Converting pixel values from [0,255] to [-1,1]
 X_train = bias_trick(X_train)
+X_val = bias_trick(X_val)
 X_test = bias_trick(X_test)
-Y_train, Y_test = onehot_encode(Y_train), onehot_encode(Y_test)
+Y_train, Y_val, Y_test = onehot_encode(Y_train), onehot_encode(Y_val), onehot_encode(Y_test)
 
-X_train, Y_train, X_val, Y_val = train_val_split(X_train[:,:], Y_train[:,:], 0.1)
+print("Using training dataset of size: ", np.shape(X_train)[0] + np.shape(X_val)[0])
 
 # Hyperparameters
 batch_size = 128
@@ -180,7 +196,7 @@ learning_rate = 0.5
 num_batches = X_train.shape[0] // batch_size
 should_check_gradient = False
 check_step = num_batches // 10
-max_epochs = 5
+max_epochs = 100
 hidden_layer_units = 64
 
 #Task3 parameters
@@ -248,3 +264,7 @@ plt.plot(TEST_ACC, label="Testing accuracy")
 plt.plot(VAL_ACC, label="Validation accuracy")
 plt.legend()
 plt.show()
+
+#Saving for plotting later
+#with open('/home/l/Documents/TDT4265/Assignment2/TDT4265_A2/task5/result/without_expanded_dataset', 'wb') as fp:
+#    pickle.dump(TEST_ACC, fp)
