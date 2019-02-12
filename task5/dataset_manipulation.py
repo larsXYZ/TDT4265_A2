@@ -46,7 +46,7 @@ def generate_extra_datasets(X_train,Y_train):
     shifted_extras = 0
     agw_extras = 0
     rotated_extras = 0
-    combination_extras = 0
+    combination_extras = 5000
     total = blurred_extras+shifted_extras+agw_extras+rotated_extras+combination_extras
 
     #Strengths of the available modifications, the limits of the probability density function.
@@ -112,7 +112,8 @@ def generate_extra_datasets(X_train,Y_train):
         image = np.reshape(X_train[i,:],(28,28))
 
         #Vector of shape [x, x, x, x], index 0: blur, index 1: shift, index 2: agw, index 3: rotate
-        modification_vector = np.ndarray.tolist(np.random.randint(0,high=2,size=(4,1)))
+        #modification_vector = np.ndarray.tolist(np.random.randint(0,high=2,size=(4,1)))
+        modification_vector = np.array([0,1,0,1]) #Forcing rotation and shift
 
         #Disabling AGW
         modification_vector[2] = 0
