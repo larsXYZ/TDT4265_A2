@@ -52,23 +52,6 @@ def weight_initialization(input_unit,output_unit):
         weight_shape = (output_unit,input_unit)
         return np.random.uniform(-1,1,weight_shape)
 
-def check_gradient(X, targets, w, epsilon, computed_gradient, layer):
-    print("Checking gradient...")
-    print('Shape', w.shape)
-    dw = np.copy(computed_gradient)
-    for k in range(10): #Selects only a few weights    #w.shape[0]
-        for j in range(64): #Selects only a few weights   #w.shape[1]
-            new_weight1, new_weight2 = np.copy(w), np.copy(w)
-            new_weight1[k,j] += epsilon
-            new_weight2[k,j] -= epsilon
-            loss1 = cross_entropy_loss_check(X, targets, new_weight1, layer)
-            loss2 = cross_entropy_loss_check(X, targets, new_weight2, layer)
-            dw[k,j] = (loss1 - loss2) / (2*epsilon)
-
-    maximum_absolute_difference = abs(computed_gradient-dw).max()
-    print('maximum_absolute_difference:',maximum_absolute_difference)
-    assert maximum_absolute_difference <= epsilon**2, "Absolute error was: {}".format(maximum_absolute_difference)
-
 def sigmoid(a):
     return 1/(1 + np.exp(-a))
 
@@ -91,78 +74,67 @@ def forward_hidden(X, w_ji):
     else:
         return sigmoid(a)
 
-def calculate_accuracy(X, targets, w_ji, w_kj):
-    hidden_layer = forward_hidden(X, w_ji)
-    output = forward_output(hidden_layer, w_kj)
+def calculate_accuracy(X, targets, w_ji, w_kj, w_hh):
+    first_hidden_layer = forward_hidden(X, w_ji)
+    second_hidden_layer = forward_hidden(first_hidden_layer, w_hh)
+    output = forward_output(second_hidden_layer, w_kj)
     predictions = output.argmax(axis=1)
     targets = targets.argmax(axis=1)
     return (predictions == targets).mean()
 
-def cross_entropy_loss_check(X, targets, w, layer):
-    if layer=='output':
-        output = forward_output(X, w)
-    else:
-        output = forward_hidden(X, w)
+def cross_entropy_loss(X, targets, w_ji, w_kj, w_hh):
+    first_hidden_layer = forward_hidden(X, w_ji)
+    second_hidden_layer = forward_hidden(first_hidden_layer, w_hh)
+    output = forward_output(second_hidden_layer, w_kj)
     assert output.shape == targets.shape
     log_y = np.log(output)
     cross_entropy = -targets * log_y
     return cross_entropy.mean()
 
-def cross_entropy_loss(X, targets, w_ji, w_kj):
-    hidden_layer = forward_hidden(X, w_ji)
-    output = forward_output(hidden_layer, w_kj)
-    assert output.shape == targets.shape
-    log_y = np.log(output)
-    cross_entropy = -targets * log_y
-    return cross_entropy.mean()
-
-def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, should_check_gradient, w_kj_vel, w_ji_vel):
+def gradient_descent(first_hidden_layer, targets, X_batch, w_kj, w_ji, w_hh, learning_rate, should_check_gradient, w_kj_vel, w_ji_vel, w_hh_vel):
 
     #Gradient descent for weights between hidden layer and output layer
-    normalization_factor = hidden_layer.shape[0] * targets.shape[1] # batch_size * num_classes
-    outputs = forward_output(hidden_layer, w_kj)
+    normalization_factor = first_hidden_layer.shape[0] * targets.shape[1] # batch_size * num_classes
+    second_hidden_layer = forward_hidden(first_hidden_layer, w_hh)
+    outputs = forward_output(second_hidden_layer, w_kj)
     delta_k = - (targets - outputs)
 
-    dw_kj = delta_k.T.dot(hidden_layer)
+    dw_kj = delta_k.T.dot(second_hidden_layer)
     dw_kj = dw_kj / normalization_factor # Normalize gradient equally as loss normalization
     assert dw_kj.shape == w_kj.shape, "dw_kj shape was: {}. Expected: {}".format(dw_kj.shape, w_kj.shape)
 
-    if should_check_gradient:
-        print('gradient_descent')
-        check_gradient(hidden_layer, targets, w_kj, 1e-2,  dw_kj, 'output')
+    dw_hh, delta_j = gradient_hidden(first_hidden_layer, w_hh, w_kj, normalization_factor, delta_k)
+    assert dw_hh.shape == w_hh.shape, "dw_hh shape was: {}. Expected: {}".format(dw_hh.shape, w_hh.shape)
 
-    #Gradient descent for weights between input layer and hidden layer
-    if (use_improved_sigmoid):
-        z = X_batch.dot(w_ji.T)
-        dz = 1.14393/np.cosh(2/3*z)
-    else:
-        hidden_layer = forward_hidden(X_batch,w_ji)
-        dz = hidden_layer*(1-hidden_layer)
-    
-    delta_j = dz*delta_k.dot(w_kj)
-
-    dw_ji = delta_j.T.dot(X_batch)
-    dw_ji = dw_ji / (normalization_factor)
-
+    dw_ji, _ = gradient_hidden(X_batch, w_ji, w_hh, normalization_factor, delta_j)
     assert dw_ji.shape == w_ji.shape, "dw_ji shape was: {}. Expected: {}".format(dw_ji.shape, w_ji.shape)
-
-    if should_check_gradient:
-        print('backpropagation')
-        check_gradient(X_batch, hidden_layer, w_ji, 1e-2,  dw_ji, 'hidden')
 
     #Updating weights
     if (use_momentum):
         w_kj_vel = momentum_coeff*w_kj_vel + learning_rate*dw_kj
         w_ji_vel = momentum_coeff*w_ji_vel + learning_rate*dw_ji
+        w_hh_vel = momentum_coeff*w_hh_vel + learning_rate*dw_hh
 
         w_kj -= w_kj_vel
         w_ji -= w_ji_vel
+        w_hh -= w_hh_vel
 
-        return w_kj, w_ji, w_kj_vel, w_ji_vel
+        return w_kj, w_ji, w_hh, w_kj_vel, w_ji_vel, w_hh_vel
     else:
         w_kj = w_kj - learning_rate * dw_kj
         w_ji = w_ji - learning_rate * dw_ji
-        return w_kj, w_ji, w_kj_vel, w_ji_vel
+        w_hh = w_hh - learning_rate * dw_hh
+        return w_kj, w_ji, w_hh, w_kj_vel, w_ji_vel, w_hh_vel
+
+def gradient_hidden(input, w_current, w_next, normalization_factor, delta_k):
+    z = input.dot(w_current.T)
+    dz = 1.14393/np.cosh(2/3*z)
+
+    delta_j = dz*delta_k.dot(w_next)
+
+    dw = delta_j.T.dot(input)
+    dw = dw / (normalization_factor)
+    return dw, delta_j
 
 X_train, Y_train, X_test, Y_test = mnist.load()
 
@@ -180,14 +152,14 @@ learning_rate = 0.5
 num_batches = X_train.shape[0] // batch_size
 should_check_gradient = False
 check_step = num_batches // 10
-max_epochs = 5
-hidden_layer_units = 64
+max_epochs = 15
+hidden_layer_units = 60
 
 #Task3 parameters
-shuffle_after_epoch = False          #3a
-use_improved_sigmoid = False         #3b
-smart_weight_initialization = False  #3c
-use_momentum = False                 #3d
+shuffle_after_epoch = True         #3a
+use_improved_sigmoid = True        #3b
+smart_weight_initialization = True  #3c
+use_momentum = True                 #3d
 momentum_coeff = 0.9                #3d
 
 # Tracking variables
@@ -201,10 +173,11 @@ VAL_ACC = []
 def train_loop():
     w_kj = weight_initialization(hidden_layer_units,Y_train.shape[1])
     w_ji = weight_initialization(X_train.shape[1],hidden_layer_units)
+    w_hh = weight_initialization(hidden_layer_units,hidden_layer_units)
 
     w_kj_vel = np.zeros((Y_train.shape[1],hidden_layer_units))
     w_ji_vel = np.zeros((hidden_layer_units,X_train.shape[1]))
-
+    w_hh_vel = np.zeros((hidden_layer_units,hidden_layer_units))
 
     for e in range(max_epochs): # Epochs
 
@@ -216,35 +189,45 @@ def train_loop():
             X_batch = X_train[i*batch_size:(i+1)*batch_size]
             Y_batch = Y_train[i*batch_size:(i+1)*batch_size]
 
-            hidden_layer = forward_hidden(X_batch,w_ji)
+            first_hidden_layer = forward_hidden(X_batch,w_ji)
 
-            w_kj, w_ji, w_kj_vel, w_ji_vel = gradient_descent(hidden_layer, Y_batch, X_batch, w_kj, w_ji,  learning_rate, should_check_gradient, w_kj_vel, w_ji_vel)
+            w_kj, w_ji, w_hh, w_kj_vel, w_ji_vel, w_hh_vel = gradient_descent(first_hidden_layer, Y_batch, X_batch, w_kj, w_ji, w_hh, learning_rate, should_check_gradient, w_kj_vel, w_ji_vel, w_hh_vel)
 
             if i % check_step == 0:
                 # Loss
-                TRAIN_LOSS.append(cross_entropy_loss(X_train, Y_train, w_ji, w_kj))
-                TEST_LOSS.append(cross_entropy_loss(X_test, Y_test, w_ji, w_kj))
-                VAL_LOSS.append(cross_entropy_loss(X_val, Y_val, w_ji, w_kj))
-                TRAIN_ACC.append(calculate_accuracy(X_train, Y_train, w_ji, w_kj))
-                TEST_ACC.append(calculate_accuracy(X_test, Y_test, w_ji, w_kj))
-                VAL_ACC.append(calculate_accuracy(X_val, Y_val, w_ji, w_kj))
+                TRAIN_LOSS.append(cross_entropy_loss(X_train, Y_train, w_ji, w_kj, w_hh))
+                TEST_LOSS.append(cross_entropy_loss(X_test, Y_test, w_ji, w_kj, w_hh))
+                VAL_LOSS.append(cross_entropy_loss(X_val, Y_val, w_ji, w_kj, w_hh))
+                TRAIN_ACC.append(calculate_accuracy(X_train, Y_train, w_ji, w_kj, w_hh))
+                TEST_ACC.append(calculate_accuracy(X_test, Y_test, w_ji, w_kj, w_hh))
+                VAL_ACC.append(calculate_accuracy(X_val, Y_val, w_ji, w_kj, w_hh))
                 if should_early_stop(VAL_LOSS):
                     print(VAL_LOSS[-4:])
                     print("early stopping.")
-                    return w_ji, w_kj
-    return w_ji, w_kj
+                    return w_ji, w_kj, w_hh
+    return w_ji, w_kj, w_hh
 
-w_ji, w_kj = train_loop()
+w_ji, w_kj, w_hh = train_loop()
 
-plt.plot(TRAIN_LOSS, label="Training loss")
-plt.plot(TEST_LOSS, label="Testing loss")
-plt.plot(VAL_LOSS, label="Validation loss")
+epoch = [i/11 for i in range(0, len(TRAIN_LOSS))]
+plt.plot(epoch, TRAIN_LOSS, label="Train loss")
+plt.plot(epoch, TEST_LOSS, label="Test loss")
+plt.plot(epoch, VAL_LOSS, label="Validation loss")
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.grid(color='grey', linestyle='-', linewidth=1)
 plt.legend()
+plt.ylim([0, 0.2])
 plt.show()
 
 plt.clf()
-plt.plot(TRAIN_ACC, label="Training accuracy")
-plt.plot(TEST_ACC, label="Testing accuracy")
-plt.plot(VAL_ACC, label="Validation accuracy")
+
+plt.plot(epoch, TRAIN_ACC, label="Training accuracy")
+plt.plot(epoch, TEST_ACC, label="Testing accuracy")
+plt.plot(epoch, VAL_ACC,  label="Validation accuracy")
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.grid(color='grey', linestyle='-', linewidth=1)
 plt.legend()
+plt.ylim([0.8, 1.0])
 plt.show()

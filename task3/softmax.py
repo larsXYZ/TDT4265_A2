@@ -138,7 +138,7 @@ def gradient_descent(hidden_layer, targets, X_batch, w_kj, w_ji, learning_rate, 
     else:
         hidden_layer = forward_hidden(X_batch,w_ji)
         dz = hidden_layer*(1-hidden_layer)
-    
+
     delta_j = dz*delta_k.dot(w_kj)
 
     dw_ji = delta_j.T.dot(X_batch)
@@ -231,6 +231,7 @@ def train_loop():
 
 #Testing the tricks of the trade
 
+
 #No tricks
 print("Task 3")
 w_ji, w_kj = train_loop()
@@ -268,4 +269,21 @@ VAL_LOSS.clear()
 
 plt.legend()
 plt.grid(color='grey', linestyle='-', linewidth=1)
+plt.show()
+
+plt.clf()
+
+print("\nTask 4a/b")
+shuffle_after_epoch = True; use_improved_sigmoid = True; smart_weight_initialization = True; use_momentum = True
+hidden_layer_units = 64
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss ("+ str(hidden_layer_units) + " hidden layer units)")
+
+VAL_LOSS.clear()
+
+hidden_layer_units = 10
+w_ji, w_kj = train_loop()
+plt.plot(VAL_LOSS, label="Validation loss ("+ str(hidden_layer_units) + " hidden layer units)")
+plt.legend()
+plt.ylim([0, 0.2])
 plt.show()
